@@ -1,6 +1,6 @@
 import { Statistic } from '../objects/Statistic';
-import { writeFile, createWriteStream } from 'fs';
 import { Logger } from '@nestjs/common';
+import { writeFile } from 'fs';
 
 /**
  * Comparable of 'popularity' prop in statistic to sort by Highest priority
@@ -8,8 +8,12 @@ import { Logger } from '@nestjs/common';
  * @param {Statistic} b
  */
 export const sortByPopularity = (a: Statistic, b: Statistic) => {
-    if (a.popularity > b.popularity) { return -1; }
-    if (b.popularity > a.popularity) { return 1; }
+    if (a.popularity > b.popularity) {
+        return -1;
+    }
+    if (b.popularity > a.popularity) {
+        return 1;
+    }
 
     return 0;
 };
@@ -23,7 +27,8 @@ export const sortAlphabetically = (a: Statistic, b: Statistic) => {
     // return a.name.localeCompare(b.name);
     const nameA = a.name.toLowerCase();
     const nameB = b.name.toLowerCase();
-    if (nameA < nameB) { // sort ascending
+    if (nameA < nameB) {
+        // sort ascending
         return -1;
     }
     if (nameA > nameB) {

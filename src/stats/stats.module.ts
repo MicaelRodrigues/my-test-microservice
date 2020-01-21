@@ -1,14 +1,20 @@
 // src/items/items.module.ts
 
 import { Module, HttpModule, CacheModule } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { StatsService } from './stats.service';
 import { StatsController } from './stats.controller';
+import configuration from '../config/configuration';
 
 @Module({
-    imports: [CacheModule.register({
-        ttl: 60,
-    }), HttpModule],
+    imports: [
+        CacheModule.register({
+            ttl: configuration.CACHE_INTERVAL
+        }),
+        ScheduleModule.forRoot(),
+        HttpModule
+    ],
     providers: [StatsService],
-    controllers: [StatsController],
+    controllers: [StatsController]
 })
 export class StatsModule {}
