@@ -12,8 +12,19 @@ export class StatsController {
         return this.statsService.getAll();
     }
 
-    @Get(':top')
+    @Get('/top')
+    async getAllTop() {
+        return this.statsService.getAllTop();
+    }
+
+    @Get('/top/:top')
     async getTop(@Param('top') top: number): Promise<Statistic[]> {
         return this.statsService.getTop(top);
     }
+
+    @Get('/grouped')
+    async getGrouped() {
+        return this.statsService.getGroupedByFirstLetter();
+    }
+    
 }

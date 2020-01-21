@@ -46,3 +46,45 @@ export const writeStatisticsToFile = (newStatistics: Statistic[], logger: Logger
         logger.log('New game data cached in file');
     });*/
 };
+
+/**
+ * Program to add VERY large numbers in javascript
+ * Note - numbers should be passed as strings.
+ * example -
+ * add("15", "15");  // returns "30"
+ * Adapted from {@link https://github.com/niinpatel/addVeryLargeNumbers}
+ */
+export const largeSum = (str1: string, str2: string): string => {
+    let sum = ''; // our result will be stored in a string.
+
+    // we'll need these in the program many times.
+    const str1Length = str1.length;
+    const str2Length = str2.length;
+
+    // if s2 is longer than s1, swap them.
+    if (str2Length > str1Length) {
+        const aux = str2;
+        str2 = str1;
+        str1 = aux;
+    }
+
+    let carry = 0; // number that is carried to next decimal place, initially zero.
+    let a;
+    let b;
+    let temp;
+    let digitSum;
+    for (let i = 0; i < str1.length; i++) {
+        a = parseInt(str1.charAt(str1.length - 1 - i), 10); // get ith digit of str1 from right, we store it in a
+        b = parseInt(str2.charAt(str2.length - 1 - i), 10); // get ith digit of str2 from right, we store it in b
+        b = b ? b : 0; // make sure b is a number, (this is useful in case, str2 is shorter than str1
+        temp = (carry + a + b).toString(); // add a and b along with carry, store it in a temp string.
+        digitSum = temp.charAt(temp.length - 1); //
+        carry = parseInt(temp.substr(0, temp.length - 1), 10); // split the string into carry and digitSum ( least significant digit of abSum.
+        carry = carry ? carry : 0; // if carry is not number, make it zero.
+
+        // append digitSum to 'sum'. If we reach leftmost digit, append abSum which includes carry too.
+        sum = i === str1.length - 1 ? temp + sum : digitSum + sum;
+    }
+
+    return sum; // return sum
+};

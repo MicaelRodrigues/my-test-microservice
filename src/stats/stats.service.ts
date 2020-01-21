@@ -1,10 +1,11 @@
 import { Injectable, HttpService, OnModuleInit, Logger, UseInterceptors, CacheInterceptor } from '@nestjs/common';
 import { Statistic } from './objects/Statistic';
-import { sortByPopularity, writeStatisticsToFile, sortAlphabetically } from './utils/utils';
+import { sortByPopularity, writeStatisticsToFile, sortAlphabetically, largeSum } from './utils/utils';
 import { Statistics } from './objects/Statistics';
 import { GameService } from './objects/GameService';
 import { Interval } from '@nestjs/schedule';
 import configuration from 'src/config/configuration';
+import { GroupedStatistics } from './objects/GroupedStatistics';
 
 @Injectable()
 @UseInterceptors(CacheInterceptor)
@@ -30,16 +31,31 @@ export class StatsService implements OnModuleInit {
         await this.loadStatistics();
     }
 
-    async getAll(): Promise<Statistics> {
-        const top5 = await this.getTop(5);
-        const top10 = await this.getTop(10);
-        const top100 = await this.getTop(100);
+    /**
+     * Get all statistics Statistics and GroupedStatistics
+     */
+    async getAll(): Promise<Statistics | GroupedStatistics> {
+        const { top5, top10, top100 } = await this.getAllTop();
         const byLetter = await this.getGroupedByFirstLetter();
         return {
             top5,
             top10,
             top100,
             ...byLetter // some are numbers (maybe group by first found letter)
+        };
+    }
+
+    /**
+     * Get all top stats
+     */
+    async getAllTop(): Promise<Statistics> {
+        const top5 = await this.getTop(5);
+        const top10 = await this.getTop(10);
+        const top100 = await this.getTop(100);
+        return {
+            top5,
+            top10,
+            top100
         } as Statistics;
     }
 
@@ -47,19 +63,24 @@ export class StatsService implements OnModuleInit {
         return this.cachedStatistics.slice(0, n);
     }
 
-    private async getGroupedByFirstLetter(): Promise<Statistics> {
+    async getGroupedByFirstLetter(): Promise<GroupedStatistics> {
         return [...this.cachedStatistics].sort(sortAlphabetically).reduce((acc, e) => {
-            // get first letter
             const letterKey = e.name[0].toLowerCase();
             if (!acc[letterKey]) {
                 // if there is no property with this letter create it
-                acc[letterKey] = [e];
+                acc[letterKey] = {
+                    games: [e],
+                    totalPopularity: String(e.popularity),
+                    totalGames: 1
+                };
             } else {
                 // push other statistic to array for that letter
-                acc[letterKey].push(e);
+                acc[letterKey].games.push(e);
+                acc[letterKey].totalPopularity = largeSum(String(acc[letterKey].totalPopularity), String(e.popularity));
+                acc[letterKey].totalGames += 1;
             }
             return acc;
-        }, {} as Statistics);
+        }, {} as GroupedStatistics);
     }
 
     private async loadStatistics(): Promise<void> {
@@ -70,7 +91,8 @@ export class StatsService implements OnModuleInit {
             this.cachedStatistics = await this.fetchStatistics();
             // Update cache file
             writeStatisticsToFile(this.cachedStatistics, this.logger);
-        } else {
+        }
+        if (this.cachedStatistics.length === 0) {
             // returned last cached file (assume is already sorted by popularity on last write)
             const gameData = await import('../../offline/gameData.json');
             this.cachedStatistics = gameData;

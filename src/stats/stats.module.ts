@@ -9,7 +9,7 @@ import configuration from '../config/configuration';
 @Module({
     imports: [
         CacheModule.register({
-            ttl: configuration.CACHE_INTERVAL
+            ttl: configuration.CACHE_TTL
         }),
         ScheduleModule.forRoot(),
         HttpModule
