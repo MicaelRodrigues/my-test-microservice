@@ -1,4 +1,4 @@
-import { Injectable, HttpService, OnModuleInit, Logger, UseInterceptors, CacheInterceptor } from '@nestjs/common';
+import { Injectable, HttpService, OnModuleInit, Logger } from '@nestjs/common';
 import { Statistic } from './objects/Statistic';
 import { sortByPopularity, writeStatisticsToFile, sortAlphabetically, largeSum } from './utils/utils';
 import { Statistics } from './objects/Statistics';
@@ -6,17 +6,18 @@ import { GameService } from './objects/GameService';
 import { Interval } from '@nestjs/schedule';
 import configuration from 'src/config/configuration';
 import { GroupedStatistics } from './objects/GroupedStatistics';
+import cachedData from '../../offline/gameData.json';
 
 @Injectable()
-@UseInterceptors(CacheInterceptor)
 export class StatsService implements OnModuleInit {
     // TODO: Use a singleton logger
     private logger = new Logger(StatsService.name);
     private cachedStatistics: Statistic[] = [];
     constructor(private readonly http: HttpService) {}
 
-    async onModuleInit() {
-        await this.loadStatistics();
+    onModuleInit() {
+        // Force synchronous run to avoid caching before first load
+        (async() => await this.loadStatistics())();
         // TODO: // Implement cache policy to refresh
         // - Check how manage cache with Cache Module:
         // -- After ttl (1 hour) regenerate stats once (as in onModuleInit)
@@ -84,18 +85,19 @@ export class StatsService implements OnModuleInit {
     }
 
     private async loadStatistics(): Promise<void> {
+        
         const isHealthy = await this.isServiceHealthy();
         this.logger.debug(`Service is ${isHealthy ? '' : 'not '}healthy`);
         if (isHealthy) {
             // Get Updated statistics
             this.cachedStatistics = await this.fetchStatistics();
-            // Update cache file
-            writeStatisticsToFile(this.cachedStatistics, this.logger);
         }
         if (this.cachedStatistics.length === 0) {
             // returned last cached file (assume is already sorted by popularity on last write)
-            const gameData = await import('../../offline/gameData.json');
-            this.cachedStatistics = gameData;
+            this.cachedStatistics = cachedData;
+        } else {
+            // Update cache file with last request
+            writeStatisticsToFile(this.cachedStatistics, this.logger);
         }
     }
 

@@ -39,12 +39,12 @@ export const sortAlphabetically = (a: Statistic, b: Statistic) => {
 
 export const writeStatisticsToFile = (newStatistics: Statistic[], logger: Logger): void => {
     // Code commented because watch mode is always recompiling, need to check why
-    /*writeFile('offline/gameData.json', JSON.stringify([...newStatistics]), (err) => {
+    writeFile('offline/gameData.json', JSON.stringify([...newStatistics]), (err) => {
         if (err) {
             throw err;
         }
         logger.log('New game data cached in file');
-    });*/
+    });
 };
 
 /**
