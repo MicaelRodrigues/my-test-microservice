@@ -11,9 +11,13 @@ import cachedData from '../../offline/gameData.json';
 @Injectable()
 export class StatsService implements OnModuleInit {
     // TODO: Use a singleton logger
-    private logger = new Logger(StatsService.name);
+    private static logger = new Logger(StatsService.name);
     private cachedStatistics: Statistic[] = [];
-    constructor(private readonly http: HttpService) {}
+    private endPointInError: boolean;
+
+    constructor(private readonly http: HttpService) {
+        this.endPointInError = false;
+    }
 
     onModuleInit() {
         // Force synchronous run to avoid caching before first load
@@ -28,8 +32,19 @@ export class StatsService implements OnModuleInit {
     // Set an interval to refresh statistics
     @Interval(configuration.CACHE_INTERVAL)
     async handleInterval() {
-        this.logger.debug('Updating statistics');
+        StatsService.logger.debug('Fetching new statistics from game service');
         await this.loadStatistics();
+    }
+
+    @Interval(configuration.REMOTE_RETRY_INTERVAL)
+    async handleCircuitInterval(){
+        if(this.inError){
+            // Remove error flag (if requests fails again it will be set in method)
+            this.inError = false;
+            StatsService.logger.debug('Retrying requests to game service');
+            await this.loadStatistics();
+            // TODO: Get a way to force cache refresh in these cases 
+        }
     }
 
     /**
@@ -87,7 +102,7 @@ export class StatsService implements OnModuleInit {
     private async loadStatistics(): Promise<void> {
         
         const isHealthy = await this.isServiceHealthy();
-        this.logger.debug(`Service is ${isHealthy ? '' : 'not '}healthy`);
+        StatsService.logger.debug(`Service is ${isHealthy ? '' : 'not '}healthy`);
         if (isHealthy) {
             // Get Updated statistics
             this.cachedStatistics = await this.fetchStatistics();
@@ -97,7 +112,7 @@ export class StatsService implements OnModuleInit {
             this.cachedStatistics = cachedData;
         } else {
             // Update cache file with last request
-            writeStatisticsToFile(this.cachedStatistics, this.logger);
+            writeStatisticsToFile(this.cachedStatistics, StatsService.logger);
         }
     }
 
@@ -114,8 +129,9 @@ export class StatsService implements OnModuleInit {
             const service = await this.getServiceHealth();
             return service.status === 'UP' && service.services.schedules === 'UP';
         } catch (err) {
-            this.logger.debug(err.message);
-            // request error: assume server down
+            StatsService.logger.debug(err.message);
+            // request error: assume server down and mark endpoint in error
+            this.inError = true;
             return false;
         }
     }
@@ -127,10 +143,24 @@ export class StatsService implements OnModuleInit {
             const response = await this.http.get(`${configuration.REMOTE_SERVICE_ENDPOINT}/api/v1/games/`).toPromise();
             return response.data.sort(sortByPopularity);
         } catch (err) {
-            this.logger.error(`Server error: ${err.message}`);
-            this.logger.debug(`Using cached statistics`);
+            // Mark endpoint in error
+            this.inError = true;
+            StatsService.logger.error(`Server error: ${err.message}`);
+            StatsService.logger.debug(`Using cached statistics`);
             // returned last cached objects
             return this.cachedStatistics;
         }
+    }
+
+    /**
+     * Getter for endPointInError
+     */
+    get inError(): boolean {
+        return this.endPointInError;
+    }
+
+    /** Setter for endPointInError */
+    set inError(state: boolean) {
+        this.endPointInError = state;
     }
 }
