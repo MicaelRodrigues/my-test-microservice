@@ -1,4 +1,5 @@
 import { Injectable, HttpService, OnModuleInit, Logger } from '@nestjs/common';
+import { ClientProxy, Client } from '@nestjs/microservices';
 import { Statistic } from './objects/Statistic';
 import { sortByPopularity, writeStatisticsToFile, sortAlphabetically, largeSum } from './utils/utils';
 import { Statistics } from './objects/Statistics';
@@ -7,6 +8,7 @@ import { Interval } from '@nestjs/schedule';
 import configuration from 'src/config/configuration';
 import { GroupedStatistics } from './objects/GroupedStatistics';
 import cachedData from '../../offline/gameData.json';
+import { Transport } from '@nestjs/common/enums/transport.enum';
 
 @Injectable()
 export class StatsService implements OnModuleInit {
@@ -18,6 +20,9 @@ export class StatsService implements OnModuleInit {
     constructor(private readonly http: HttpService) {
         this.endPointInError = false;
     }
+
+    @Client({ transport: Transport.KAFKA /* Or other Message broker */ })
+    client: ClientProxy;
 
     onModuleInit() {
         // Force synchronous run to avoid caching before first load
@@ -43,7 +48,6 @@ export class StatsService implements OnModuleInit {
             this.inError = false;
             StatsService.logger.debug('Retrying requests to game service');
             await this.loadStatistics();
-            // TODO: Get a way to force cache refresh in these cases 
         }
     }
 
@@ -99,6 +103,17 @@ export class StatsService implements OnModuleInit {
         }, {} as GroupedStatistics);
     }
 
+    /**
+     * Publish data updates to subscribers
+     */
+    private publishStatistics() {
+        this.client.emit<Statistics[]>(configuration.STATS_UPDATE_MESSAGE, this.cachedStatistics);
+        // TODO: Get a way to force CacheModule refresh
+    }
+
+    /**
+     * Load/Refresh statistics data
+     */
     private async loadStatistics(): Promise<void> {
         
         const isHealthy = await this.isServiceHealthy();
@@ -107,6 +122,7 @@ export class StatsService implements OnModuleInit {
             // Get Updated statistics
             this.cachedStatistics = await this.fetchStatistics();
         }
+        // There are no stats
         if (this.cachedStatistics.length === 0) {
             // returned last cached file (assume is already sorted by popularity on last write)
             this.cachedStatistics = cachedData;
@@ -114,6 +130,9 @@ export class StatsService implements OnModuleInit {
             // Update cache file with last request
             writeStatisticsToFile(this.cachedStatistics, StatsService.logger);
         }
+
+        // Publish statistics
+        this.publishStatistics();
     }
 
     private async getServiceHealth(): Promise<GameService> {
