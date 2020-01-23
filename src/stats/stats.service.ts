@@ -5,7 +5,7 @@ import { sortByPopularity, writeStatisticsToFile, sortAlphabetically, largeSum }
 import { Statistics } from './objects/Statistics';
 import { GameService } from './objects/GameService';
 import { Interval } from '@nestjs/schedule';
-import configuration from 'src/config/configuration';
+import configuration from '../config/configuration';
 import { GroupedStatistics } from './objects/GroupedStatistics';
 import cachedData from '../../offline/gameData.json';
 import { Transport } from '@nestjs/common/enums/transport.enum';
@@ -17,22 +17,18 @@ export class StatsService implements OnModuleInit {
     private cachedStatistics: Statistic[] = [];
     private endPointInError: boolean;
 
+    @Client({ transport: Transport.KAFKA /* Or other Message broker */ })
+    private client: ClientProxy;
+
     constructor(private readonly http: HttpService) {
         this.endPointInError = false;
     }
 
-    @Client({ transport: Transport.KAFKA /* Or other Message broker */ })
-    client: ClientProxy;
-
-    onModuleInit() {
+    async onModuleInit() {
         // Force synchronous run to avoid caching before first load
-        (async() => await this.loadStatistics())();
-        // TODO: // Implement cache policy to refresh
-        // - Check how manage cache with Cache Module:
-        // -- After ttl (1 hour) regenerate stats once (as in onModuleInit)
-        // Login client
-        // --> https://auth0.com/blog/full-stack-typescript-apps-part-1-developing-backend-apis-with-nestjs/
+        await this.loadStatistics();
     }
+
 
     // Set an interval to refresh statistics
     @Interval(configuration.CACHE_INTERVAL)
@@ -107,7 +103,10 @@ export class StatsService implements OnModuleInit {
      * Publish data updates to subscribers
      */
     private publishStatistics() {
-        this.client.emit<Statistics[]>(configuration.STATS_UPDATE_MESSAGE, this.cachedStatistics);
+        if(this.client){
+            StatsService.logger.log('Publishing updates to broker');
+            this.client.emit<Statistics[]>(configuration.STATS_UPDATE_MESSAGE, this.cachedStatistics);
+        }
         // TODO: Get a way to force CacheModule refresh
     }
 
