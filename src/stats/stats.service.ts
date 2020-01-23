@@ -29,7 +29,6 @@ export class StatsService implements OnModuleInit {
         await this.loadStatistics();
     }
 
-
     // Set an interval to refresh statistics
     @Interval(configuration.CACHE_INTERVAL)
     async handleInterval() {
@@ -38,8 +37,8 @@ export class StatsService implements OnModuleInit {
     }
 
     @Interval(configuration.REMOTE_RETRY_INTERVAL)
-    async handleCircuitInterval(){
-        if(this.inError){
+    async handleCircuitInterval() {
+        if (this.inError) {
             // Remove error flag (if requests fails again it will be set in method)
             this.inError = false;
             StatsService.logger.debug('Retrying requests to game service');
@@ -103,7 +102,7 @@ export class StatsService implements OnModuleInit {
      * Publish data updates to subscribers
      */
     private publishStatistics() {
-        if(this.client){
+        if (this.client) {
             StatsService.logger.log('Publishing updates to broker');
             this.client.emit<Statistics[]>(configuration.STATS_UPDATE_MESSAGE, this.cachedStatistics);
         }
@@ -114,7 +113,6 @@ export class StatsService implements OnModuleInit {
      * Load/Refresh statistics data
      */
     private async loadStatistics(): Promise<void> {
-        
         const isHealthy = await this.isServiceHealthy();
         StatsService.logger.debug(`Service is ${isHealthy ? '' : 'not '}healthy`);
         if (isHealthy) {

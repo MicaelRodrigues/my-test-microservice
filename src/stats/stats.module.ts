@@ -5,6 +5,9 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { StatsService } from './stats.service';
 import { StatsController } from './stats.controller';
 import configuration from '../config/configuration';
+import { AuthModule } from '../auth/auth.module';
+import { ClientStoreModule } from '../clients/clients.module';
+import { AuthService } from '../auth/auth.service';
 
 @Module({
     imports: [
@@ -12,7 +15,9 @@ import configuration from '../config/configuration';
             ttl: configuration.CACHE_TTL
         }),
         ScheduleModule.forRoot(),
-        HttpModule
+        HttpModule,
+        ClientStoreModule,
+        AuthModule
     ],
     providers: [StatsService],
     controllers: [StatsController]

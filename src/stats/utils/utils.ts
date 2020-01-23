@@ -38,7 +38,7 @@ export const sortAlphabetically = (a: Statistic, b: Statistic) => {
 };
 
 export const writeStatisticsToFile = (newStatistics: Statistic[], logger: Logger): void => {
-    // Code commented because watch mode is always recompiling, need to check why
+    // -> Comment block in watch mode because is recompiling in loop, need to check why
     writeFile('offline/gameData.json', JSON.stringify([...newStatistics]), (err) => {
         if (err) {
             throw err;

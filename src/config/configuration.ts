@@ -5,5 +5,7 @@ export default {
     CACHE_TTL: HOUR_IN_SECONDS,
     REMOTE_RETRY_INTERVAL: 300 * 1000, // 5 minutes (ms)
     REMOTE_SERVICE_ENDPOINT: 'http://localhost:8080',
-    STATS_UPDATE_MESSAGE: 'StatsUpdated'
+    STATS_UPDATE_MESSAGE: 'StatsUpdated',
+    JWT_KEY: 'neverToExposePublicly',
+    JWT_EXPIRATION: '300s' // 5 minutes
 };
