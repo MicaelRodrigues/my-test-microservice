@@ -41,8 +41,10 @@ export class ClientStoreService {
     static isValidClientObject(object: any): boolean {
         return (
             object &&
-            object.id && typeof object.id === 'string' &&
-            object.password && typeof object.password === 'string'
+            object.id &&
+            typeof object.id === 'string' &&
+            object.password &&
+            typeof object.password === 'string'
         );
     }
 }

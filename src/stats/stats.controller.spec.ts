@@ -10,10 +10,7 @@ describe('StatsController', () => {
 
     beforeEach(async () => {
         const app: TestingModule = await Test.createTestingModule({
-            imports: [CacheModule.register(),
-            HttpModule,
-            ClientStoreModule,
-            AuthModule],
+            imports: [CacheModule.register(), HttpModule, ClientStoreModule, AuthModule],
             controllers: [StatsController],
             providers: [StatsService]
         }).compile();

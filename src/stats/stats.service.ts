@@ -7,7 +7,6 @@ import { GameService } from './objects/GameService';
 import { Interval } from '@nestjs/schedule';
 import configuration from '../config/configuration';
 import { GroupedStatistics } from './objects/GroupedStatistics';
-import cachedData from '../../offline/gameData.json';
 import { Transport } from '@nestjs/common/enums/transport.enum';
 
 @Injectable()
@@ -113,59 +112,76 @@ export class StatsService implements OnModuleInit {
      * Load/Refresh statistics data
      */
     private async loadStatistics(): Promise<void> {
-        const isHealthy = await this.isServiceHealthy();
-        StatsService.logger.debug(`Service is ${isHealthy ? '' : 'not '}healthy`);
-        if (isHealthy) {
+        try {
+            // Run health check
+            await this.runHealthCheck();
             // Get Updated statistics
             this.cachedStatistics = await this.fetchStatistics();
-        }
-        // There are no stats
-        if (this.cachedStatistics.length === 0) {
-            // returned last cached file (assume is already sorted by popularity on last write)
-            this.cachedStatistics = cachedData;
-        } else {
-            // Update cache file with last request
-            writeStatisticsToFile(this.cachedStatistics, StatsService.logger);
+        } catch (err) {
+            StatsService.logger.error(err.message);
+            StatsService.logger.debug('...Using cached statistics');
+            if (this.cachedStatistics.length === 0) {
+                // Only load if nothing is in memory
+                this.cachedStatistics = await this.fetchStatisticsFromFile();
+            }
         }
 
-        // Publish statistics
+        // Always publish statistics when load happens (even if using cached data)
         this.publishStatistics();
     }
 
+    /**
+     * Check weather remote service is healthy
+     */
+    private async runHealthCheck(): Promise<void> {
+        let isHealthy: boolean = false;
+        try {
+            const service = await this.getServiceHealth();
+            isHealthy = service.status === 'UP' && service.services.schedules === 'UP';
+        } catch (err) {
+            // request error: assume server down and mark endpoint in error
+            StatsService.logger.error(err.message);
+            this.inError = true;
+        }
+        StatsService.logger.debug(`Games Service is ${isHealthy ? '' : 'not '}healthy`);
+        if (!isHealthy) {
+            // TODO: perform Monitoring, Orchestration, Reaction ...
+            throw new Error(`Games Service is failing`);
+        }
+    }
+
+    /**
+     * Request remote service health status
+     */
     private async getServiceHealth(): Promise<GameService> {
         const response = await this.http.get(`${configuration.REMOTE_SERVICE_ENDPOINT}/api/v1/healthcheck`).toPromise();
         return response.data as GameService;
     }
 
     /**
-     * Check weather remote service is healthy
-     */
-    private async isServiceHealthy(): Promise<boolean> {
-        try {
-            const service = await this.getServiceHealth();
-            return service.status === 'UP' && service.services.schedules === 'UP';
-        } catch (err) {
-            StatsService.logger.debug(err.message);
-            // request error: assume server down and mark endpoint in error
-            this.inError = true;
-            return false;
-        }
-    }
-    /**
      * Fetch statistics to game web service
      */
     private async fetchStatistics(): Promise<Statistic[]> {
         try {
             const response = await this.http.get(`${configuration.REMOTE_SERVICE_ENDPOINT}/api/v1/games/`).toPromise();
-            return response.data.sort(sortByPopularity);
+            const sortedGames = response.data.sort(sortByPopularity) as Statistic[];
+            if (sortedGames.length > 0) {
+                // Update cache file with last request (Only write when there's data)
+                writeStatisticsToFile(sortedGames, StatsService.logger);
+            }
+            return sortedGames;
         } catch (err) {
             // Mark endpoint in error
             this.inError = true;
-            StatsService.logger.error(`Server error: ${err.message}`);
-            StatsService.logger.debug(`Using cached statistics`);
-            // returned last cached objects
-            return this.cachedStatistics;
+            throw new Error(`Server error: ${err.message}`);
         }
+    }
+
+    /**
+     * Load statistics from cached file. If empty return empty array
+     */
+    private async fetchStatisticsFromFile(): Promise<Statistic[]> {
+        return (await (await import(`../../offline/${configuration.CACHE_FILE}`)).default) || [];
     }
 
     /**

@@ -1,6 +1,7 @@
 import { Statistic } from '../objects/Statistic';
 import { Logger } from '@nestjs/common';
 import { writeFile } from 'fs';
+import configuration from '../../config/configuration';
 
 /**
  * Comparable of 'popularity' prop in statistic to sort by Highest priority
@@ -39,7 +40,7 @@ export const sortAlphabetically = (a: Statistic, b: Statistic) => {
 
 export const writeStatisticsToFile = (newStatistics: Statistic[], logger: Logger): void => {
     // -> Comment block in watch mode because is recompiling in loop, need to check why
-    writeFile('offline/gameData.json', JSON.stringify([...newStatistics]), (err) => {
+    writeFile(`offline/${configuration.CACHE_FILE}`, JSON.stringify([...newStatistics]), err => {
         if (err) {
             throw err;
         }
