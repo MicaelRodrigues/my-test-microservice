@@ -1,0 +1,23 @@
+version: '3.7'
+services:
+    capitalise-service:
+        image: capitalisers/coding-test-game-data:latest
+        networks:
+            - msgamedata-network
+        ports:
+            - '8080:8080'
+
+    msgamedata:
+        build:
+            context: .
+            dockerfile: prod.dockerfile
+        depends_on:
+            - capitalise-service
+        ports:
+            - '3000:5000'
+        networks:
+            - msgamedata-network
+
+networks:
+    msgamedata-network:
+        driver: bridge
