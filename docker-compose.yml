@@ -1,4 +1,4 @@
-version: '3.7'
+version: '3.8'
 services:
     capitalise-service:
         image: capitalisers/coding-test-game-data:latest
@@ -11,6 +11,7 @@ services:
         build:
             context: .
             dockerfile: prod.dockerfile
+        image: mcrodrigues/ms-game-data:latest
         depends_on:
             - capitalise-service
         ports:
