@@ -8,12 +8,17 @@ Services caches remote service data in 1 hour and retries failed requests in 5 m
 
 ## Available endpoints on `http://<YOUR_HOST>:<YOUR_PORT>`
 
--`stats/login` - Authenticate a sample user and get `JWT (Json Web Token)` (`id: ea, password: changeme`)
--- After getting the token use Bearer Token authorization on subsequent requests
--`stats/login` - get all statistics
--`stats/grouped` - get all statistics grouped by first letter
--`stats/top` - get top 5, 10 and 100 statistics
--`stats/top:number` - get top statistics for the provided `number` argument
+- `stats/login` - Authenticate a sample user and get `JWT (Json Web Token)` (`id: ea, password: changeme`)
+
+> After getting the token use Bearer Token authorization on subsequent requests
+
+- `stats/login` - get all statistics
+
+- `stats/grouped` - get all statistics grouped by first letter
+
+- `stats/top` - get top 5, 10 and 100 statistics
+
+- `stats/top:number` - get top statistics for the provided `number` argument
 
 ## Running
 
