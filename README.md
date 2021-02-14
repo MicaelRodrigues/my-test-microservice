@@ -12,7 +12,7 @@ Services caches remote service data in 1 hour and retries failed requests in 5 m
 
 > After getting the token use Bearer Token authorization on subsequent requests
 
-- `stats/login` - get all statistics
+- `stats` - get all statistics
 
 - `stats/grouped` - get all statistics grouped by first letter
 
